@@ -1,0 +1,12 @@
+{
+  "name": "cypher_game_gemini",
+  "version": "1.0.0",
+  "description": "Namoryx Cypher Game",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "devDependencies": {
+    "vite": "^5.2.0"
+  }
+}
