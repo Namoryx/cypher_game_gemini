@@ -1,9 +1,8 @@
 import { defineConfig } from "vite";
 
-const repoName = "cypher_game_gemini";
-
 export default defineConfig({
-  base: `/${repoName}/`,
+  // Use a relative base so built assets resolve correctly regardless of host path
+  base: "./",
   root: "src",
   build: {
     outDir: "../dist",
