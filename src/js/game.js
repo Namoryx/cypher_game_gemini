@@ -40,7 +40,7 @@ import { SoundManager } from "./audio.js";
             populateData: function() {
                this.data["Core"] = [
                     { type: "select_concept", instruction: "다음 중 'Graph Node(노드)'를 나타내는 것을 고르세요.", hint: "노드는 그래프의 개체(Entity)입니다.", correctIndex: 1, options: [{text:"Relationship", imgType:"relIcon"}, {text:"Node", imgType:"nodeIcon"}, {text:"Table", imgType:"tableIcon"}, {text:"Property", imgType:"propIcon"}]},
-                    { type: "query_builder", instruction: "모든 노드를 찾아 반환하는 쿼리를 완성하세요.", hint: "MATCH 구문 사용", correctOrder: ["MATCH", "(n)", "RETURN", "n"], wordBank: ["(n)", "WHERE", "RETURN", "MATCH", "CREATE", "DELETE", "n"], codeContext: "Graph Query"},
+                    { type: "query_builder", instruction: "모든 노드를 찾아 반환하는 쿼리를 완성하세요.", hint: "MATCH 구문 사용", correctOrder: ["MATCH", "(n)", "RETURN", "n"], wordBank: ["(n)", "WHERE", "RETURN", "MATCH", "CREATE", "DELETE", "n"]},
                     { type: "select_concept", instruction: "노드와 노드 사이의 연결은?", hint: "화살표입니다.", correctIndex: 0, options: [{text:"Relationship", imgType:"relIcon"}, {text:"Node", imgType:"nodeIcon"}, {text:"Schema", imgType:"tableIcon"}, {text:"Label", imgType:"codeSyntax", syntax:":Label"}]},
                     { type: "query_builder", instruction: "'Person' 라벨을 가진 노드를 찾으세요.", hint: ":Person 사용", correctOrder: ["MATCH", "(p:Person)", "RETURN", "p"], wordBank: ["(p:Person)", "MATCH", "RETURN", "p", "WHERE", "LIMIT"], codeContext: "Graph Query"},
                     { type: "select_concept", instruction: "키-값 쌍의 데이터는?", hint: "속성입니다.", correctIndex: 3, options: [{text:"Node", imgType:"nodeIcon"}, {text:"Label", imgType:"codeSyntax", syntax:":Label"}, {text:"Pattern", imgType:"relIcon"}, {text:"Property", imgType:"propIcon"}]},
