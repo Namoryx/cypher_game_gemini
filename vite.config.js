@@ -1,9 +1,8 @@
 import { defineConfig } from "vite";
 
-const repoName = "cypher_game_gemini";
-
 export default defineConfig({
-  base: `/${repoName}/`,
+  // Explicit base for GitHub Pages project site
+  base: "/cypher_game_gemini/",
   root: "src",
   build: {
     outDir: "../dist",
