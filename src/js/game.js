@@ -23,6 +23,7 @@ import { SoundManager } from "./audio.js";
                 selectedWords: [],
                 isCheckMode: true,
                 isTestMode: false,
+                isInputLocked: false,
                 testScore: 0,
                 testResults: {},
                 sessionQuestions: []
@@ -263,6 +264,7 @@ import { SoundManager } from "./audio.js";
                 document.getElementById('result-view').classList.add('hidden');
                 document.getElementById('test-result-view').classList.add('hidden');
                 document.getElementById('main-header').classList.remove('hidden');
+                this.state.isInputLocked = false;
                 this.state.currentStep = 0;
                 this.state.isTestMode = false;
                 Tone.Transport.stop();
@@ -275,7 +277,8 @@ import { SoundManager } from "./audio.js";
                 this.state.sessionQuestions = shuffledQuestions;
                 this.state.currentTrack = trackName;
                 this.state.isTestMode = false;
-                
+                this.state.isInputLocked = false;
+
                 document.getElementById('track-view').classList.add('hidden');
                 document.getElementById('main-header').classList.add('hidden');
                 document.getElementById('lesson-view').classList.remove('hidden');
@@ -302,8 +305,9 @@ import { SoundManager } from "./audio.js";
                 this.state.sessionQuestions = selectedQuestions;
                 this.state.currentTrack = "Test Mode";
                 this.state.isTestMode = true;
+                this.state.isInputLocked = false;
                 this.state.testScore = 0;
-                this.state.testResults = {}; 
+                this.state.testResults = {};
                 Object.keys(this.data).forEach(t => this.state.testResults[t] = {correct: 0, total: 0});
 
                 document.getElementById('landing-view').classList.add('hidden');
@@ -477,6 +481,7 @@ import { SoundManager } from "./audio.js";
             },
 
             selectOption: function(index, cardEl) {
+                if (this.state.isInputLocked) return;
                 document.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
                 cardEl.classList.add('selected');
                 this.state.selectedOption = index;
@@ -484,6 +489,7 @@ import { SoundManager } from "./audio.js";
             },
 
             toggleWord: function(word, btnEl, answerLine, wordBank) {
+                if (this.state.isInputLocked) return;
                 const isInLine = btnEl.parentElement === answerLine;
                 if (isInLine) {
                     const idx = this.state.selectedWords.indexOf(word);
@@ -523,6 +529,7 @@ import { SoundManager } from "./audio.js";
             },
 
             checkAnswer: function() {
+                if (this.state.isInputLocked) return;
                 const track = this.state.sessionQuestions;
                 const q = track[this.state.currentStep];
                 let isCorrect = false;
@@ -586,6 +593,7 @@ import { SoundManager } from "./audio.js";
                         this.state.lives--;
                         this.updateLives();
                         if(this.state.lives <= 0) {
+                             this.state.isInputLocked = true;
                              alert("Query Lives 소진! 데이터베이스 연결이 끊어졌습니다.");
                              this.confirmQuit();
                              return;
@@ -596,6 +604,7 @@ import { SoundManager } from "./audio.js";
             },
 
             nextQuestion: function() {
+                if (this.state.isInputLocked) return;
                 const track = this.state.sessionQuestions;
                 this.state.currentStep++;
                 if (this.state.currentStep >= track.length) {
