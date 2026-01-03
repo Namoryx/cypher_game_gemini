@@ -19,6 +19,7 @@ import { SoundManager } from "./audio.js";
                 currentTrack: "Core",
                 currentStep: 0,
                 lives: 5,
+                isDeathOverlayActive: false,
                 selectedOption: null,
                 selectedWords: [],
                 isCheckMode: true,
@@ -282,9 +283,10 @@ import { SoundManager } from "./audio.js";
                 document.getElementById('track-view').classList.add('hidden');
                 document.getElementById('main-header').classList.add('hidden');
                 document.getElementById('lesson-view').classList.remove('hidden');
-                
+
                 this.state.currentStep = 0;
                 this.state.lives = 5;
+                this.state.isDeathOverlayActive = false;
                 this.updateLives();
                 this.renderQuestion();
                 Tone.start();
@@ -388,6 +390,98 @@ import { SoundManager } from "./audio.js";
                 if(!track) return;
                 const pct = ((this.state.currentStep) / track.length) * 100;
                 document.getElementById('progress-bar').style.width = `${pct}%`;
+            },
+
+            showDeathOverlay: function(onComplete) {
+                if (this.state.isDeathOverlayActive) {
+                    if (typeof onComplete === 'function') onComplete();
+                    return;
+                }
+                this.state.isDeathOverlayActive = true;
+
+                const appRoot = document.getElementById('app-root');
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+
+                const resizeCanvas = () => {
+                    canvas.width = window.innerWidth;
+                    canvas.height = window.innerHeight;
+                };
+
+                resizeCanvas();
+
+                Object.assign(canvas.style, {
+                    position: 'fixed',
+                    inset: '0',
+                    width: '100vw',
+                    height: '100vh',
+                    pointerEvents: 'none',
+                    zIndex: '50'
+                });
+
+                appRoot.appendChild(canvas);
+
+                const fadeInDuration = 700;
+                const holdDuration = 1200;
+                const fadeOutDuration = 900;
+                let start = null;
+
+                const renderOverlay = (alpha) => {
+                    const { width, height } = canvas;
+                    const bandHeight = Math.min(height * 0.35, 260);
+                    const y = (height - bandHeight) / 2;
+
+                    ctx.clearRect(0, 0, width, height);
+
+                    ctx.globalAlpha = alpha * 0.6;
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(0, 0, width, height);
+
+                    ctx.globalAlpha = alpha;
+                    const gradient = ctx.createLinearGradient(0, y + bandHeight / 2, width, y + bandHeight / 2);
+                    gradient.addColorStop(0, '#000000');
+                    gradient.addColorStop(0.5, '#2b0000');
+                    gradient.addColorStop(1, '#000000');
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(0, y, width, bandHeight);
+
+                    ctx.font = `bold ${Math.min(width * 0.08, 96)}px "Cinzel", serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillStyle = `rgba(200, 0, 0, ${alpha})`;
+                    ctx.fillText('YOU DIED', width / 2, height / 2);
+                };
+
+                const cleanup = () => {
+                    window.removeEventListener('resize', resizeCanvas);
+                    canvas.remove();
+                    this.state.isDeathOverlayActive = false;
+                };
+
+                const step = (timestamp) => {
+                    if (start === null) start = timestamp;
+                    const elapsed = timestamp - start;
+                    const totalDuration = fadeInDuration + holdDuration + fadeOutDuration;
+                    let alpha;
+
+                    if (elapsed < fadeInDuration) {
+                        alpha = elapsed / fadeInDuration;
+                    } else if (elapsed < fadeInDuration + holdDuration) {
+                        alpha = 1;
+                    } else if (elapsed < totalDuration) {
+                        alpha = 1 - ((elapsed - fadeInDuration - holdDuration) / fadeOutDuration);
+                    } else {
+                        cleanup();
+                        if (typeof onComplete === 'function') onComplete();
+                        return;
+                    }
+
+                    renderOverlay(alpha);
+                    requestAnimationFrame(step);
+                };
+
+                window.addEventListener('resize', resizeCanvas);
+                requestAnimationFrame(step);
             },
 
             renderQuestion: function() {
@@ -588,7 +682,7 @@ import { SoundManager } from "./audio.js";
                     feedbackTitle.className = "font-extrabold text-xl text-[#FF4B4B]";
                     feedbackText.innerText = `Correct: ${message}`;
                     SoundManager.playWrong();
-                    
+
                     if(!this.state.isTestMode) {
                         this.state.lives--;
                         this.updateLives();
