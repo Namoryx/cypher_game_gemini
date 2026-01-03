@@ -1,8 +1,8 @@
 import { defineConfig } from "vite";
 
 export default defineConfig({
-  // Use a relative base so built assets resolve correctly regardless of host path
-  base: "./",
+  // Explicit base for GitHub Pages project site
+  base: "/cypher_game_gemini/",
   root: "src",
   build: {
     outDir: "../dist",
