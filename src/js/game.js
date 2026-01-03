@@ -19,6 +19,8 @@ import { SoundManager } from "./audio.js";
                 currentTrack: "Core",
                 currentStep: 0,
                 lives: 5,
+                isDeathOverlayActive: false,
+                lastDeathTaunt: null,
                 selectedOption: null,
                 selectedWords: [],
                 isCheckMode: true,
@@ -26,6 +28,35 @@ import { SoundManager } from "./audio.js";
                 testScore: 0,
                 testResults: {},
                 sessionQuestions: []
+            },
+
+            deathTauntPools: {
+                general: [
+                    "그래프는 친절하지만, 쉽진 않죠.",
+                    "실패도 진행도예요. 다시 갑시다.",
+                    "이번 판은 데이터로 남겼습니다.",
+                    "5초면… 다시 질 준비 완료."
+                ],
+                Core: [
+                    "기본기부터 다시. 이게 제일 빠릅니다.",
+                    "처음이 제일 어렵죠. 그래서 “코어”입니다.",
+                    "한 줄 차이가 승패를 가릅니다."
+                ],
+                Aggregation: [
+                    "숫자는 거짓말 안 하는데, 가끔 우리를 운다게 합니다.",
+                    "모으는 건 쉽고, “잘” 모으는 게 어렵죠.",
+                    "집계는… 마음까지 합치긴 어렵네요."
+                ],
+                Paths: [
+                    "길은 많습니다. 정답으로 가는 길만 적을 뿐.",
+                    "경로는 이어지는데, 멘탈은 끊기네요.",
+                    "돌아가도 됩니다. 어차피 그래프는 원형이니까."
+                ],
+                Modeling: [
+                    "설계는 미리 고생하는 기술입니다.",
+                    "모델링은 정답이 아니라 ‘덜 후회하는 선택’이죠.",
+                    "잘 만든 모델은… 당신을 배신하지 않습니다. (대부분)"
+                ]
             },
 
             init: function() {
@@ -279,9 +310,11 @@ import { SoundManager } from "./audio.js";
                 document.getElementById('track-view').classList.add('hidden');
                 document.getElementById('main-header').classList.add('hidden');
                 document.getElementById('lesson-view').classList.remove('hidden');
-                
+
                 this.state.currentStep = 0;
                 this.state.lives = 5;
+                this.state.isDeathOverlayActive = false;
+                this.state.lastDeathTaunt = null;
                 this.updateLives();
                 this.renderQuestion();
                 Tone.start();
@@ -384,6 +417,139 @@ import { SoundManager } from "./audio.js";
                 if(!track) return;
                 const pct = ((this.state.currentStep) / track.length) * 100;
                 document.getElementById('progress-bar').style.width = `${pct}%`;
+            },
+
+            getDeathTaunt: function(trackName) {
+                const pool = this.deathTauntPools[trackName] || this.deathTauntPools.general;
+                if (!pool || pool.length === 0) return "";
+
+                let choice = pool[Math.floor(Math.random() * pool.length)];
+                if (pool.length > 1 && choice === this.state.lastDeathTaunt) {
+                    let attempts = 0;
+                    while (choice === this.state.lastDeathTaunt && attempts < 5) {
+                        choice = pool[Math.floor(Math.random() * pool.length)];
+                        attempts++;
+                    }
+                    if (choice === this.state.lastDeathTaunt) {
+                        const idx = pool.indexOf(choice);
+                        choice = pool[(idx + 1) % pool.length];
+                    }
+                }
+
+                this.state.lastDeathTaunt = choice;
+                return choice;
+            },
+
+            showDeathOverlay: function(trackName, onComplete) {
+                if (this.state.isDeathOverlayActive) {
+                    if (typeof onComplete === 'function') onComplete();
+                    return;
+                }
+                this.state.isDeathOverlayActive = true;
+
+                const overlayCopy = {
+                    title: 'YOU DIED',
+                    status: 'LIFE 0 · 5초 후 재도전',
+                    taunt: this.getDeathTaunt(trackName)
+                };
+
+                const appRoot = document.getElementById('app-root');
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+
+                const resizeCanvas = () => {
+                    canvas.width = window.innerWidth;
+                    canvas.height = window.innerHeight;
+                };
+
+                resizeCanvas();
+
+                Object.assign(canvas.style, {
+                    position: 'fixed',
+                    inset: '0',
+                    width: '100vw',
+                    height: '100vh',
+                    pointerEvents: 'none',
+                    zIndex: '50'
+                });
+
+                appRoot.appendChild(canvas);
+
+                const fadeInDuration = 800;
+                const holdDuration = 3500;
+                const fadeOutDuration = 900;
+                let start = null;
+
+                const renderOverlay = (alpha) => {
+                    const { width, height } = canvas;
+                    const bandHeight = Math.min(height * 0.35, 260);
+                    const y = (height - bandHeight) / 2;
+                    const centerY = height / 2;
+
+                    ctx.clearRect(0, 0, width, height);
+
+                    ctx.globalAlpha = alpha * 0.6;
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(0, 0, width, height);
+
+                    ctx.globalAlpha = alpha;
+                    const gradient = ctx.createLinearGradient(0, y + bandHeight / 2, width, y + bandHeight / 2);
+                    gradient.addColorStop(0, '#000000');
+                    gradient.addColorStop(0.5, '#2b0000');
+                    gradient.addColorStop(1, '#000000');
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(0, y, width, bandHeight);
+
+                    const titleSize = Math.min(width * 0.08, 96);
+                    const statusSize = Math.min(width * 0.035, 36);
+                    const tauntSize = Math.min(width * 0.032, 30);
+
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+
+                    ctx.font = `700 ${titleSize}px "Cinzel", serif`;
+                    ctx.fillStyle = `rgba(200, 0, 0, ${alpha})`;
+                    ctx.fillText(overlayCopy.title, width / 2, centerY - statusSize * 0.8);
+
+                    ctx.font = `600 ${statusSize}px "Inter", sans-serif`;
+                    ctx.fillStyle = `rgba(255, 240, 240, ${alpha})`;
+                    ctx.fillText(overlayCopy.status, width / 2, centerY + statusSize * 0.2);
+
+                    ctx.font = `500 ${tauntSize}px "Inter", sans-serif`;
+                    ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.95})`;
+                    ctx.fillText(overlayCopy.taunt, width / 2, centerY + statusSize * 1.8);
+                };
+
+                const cleanup = () => {
+                    window.removeEventListener('resize', resizeCanvas);
+                    canvas.remove();
+                    this.state.isDeathOverlayActive = false;
+                };
+
+                const step = (timestamp) => {
+                    if (start === null) start = timestamp;
+                    const elapsed = timestamp - start;
+                    const totalDuration = fadeInDuration + holdDuration + fadeOutDuration;
+                    let alpha;
+
+                    if (elapsed < fadeInDuration) {
+                        alpha = elapsed / fadeInDuration;
+                    } else if (elapsed < fadeInDuration + holdDuration) {
+                        alpha = 1;
+                    } else if (elapsed < totalDuration) {
+                        alpha = 1 - ((elapsed - fadeInDuration - holdDuration) / fadeOutDuration);
+                    } else {
+                        cleanup();
+                        if (typeof onComplete === 'function') onComplete();
+                        return;
+                    }
+
+                    renderOverlay(alpha);
+                    requestAnimationFrame(step);
+                };
+
+                window.addEventListener('resize', resizeCanvas);
+                requestAnimationFrame(step);
             },
 
             renderQuestion: function() {
@@ -581,14 +747,18 @@ import { SoundManager } from "./audio.js";
                     feedbackTitle.className = "font-extrabold text-xl text-[#FF4B4B]";
                     feedbackText.innerText = `Correct: ${message}`;
                     SoundManager.playWrong();
-                    
+
                     if(!this.state.isTestMode) {
-                        this.state.lives--;
-                        this.updateLives();
-                        if(this.state.lives <= 0) {
-                             alert("Query Lives 소진! 데이터베이스 연결이 끊어졌습니다.");
-                             this.confirmQuit();
-                             return;
+                        const previousLives = this.state.lives;
+                        if (previousLives > 0) {
+                            this.state.lives--;
+                            this.updateLives();
+                            if(this.state.lives <= 0) {
+                                 this.showDeathOverlay(this.state.currentTrack, () => {
+                                    this.confirmQuit();
+                                 });
+                                 return;
+                            }
                         }
                     }
                 }
